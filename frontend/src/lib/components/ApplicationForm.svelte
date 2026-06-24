@@ -1,9 +1,17 @@
 <script lang="ts">
-	import type { ApplicationData } from '$lib/types/api';
+	interface LegacyApplicationData {
+		brand_name?: string | null;
+		class_type?: string | null;
+		abv?: string | null;
+		net_contents?: string | null;
+		producer?: string | null;
+		country_of_origin?: string | null;
+		government_warning?: string | null;
+	}
 
-	export let value: ApplicationData;
+	export let value: LegacyApplicationData;
 
-	const fields: Array<{ key: keyof ApplicationData; label: string; placeholder: string }> = [
+	const fields: Array<{ key: keyof LegacyApplicationData; label: string; placeholder: string }> = [
 		{ key: 'brand_name', label: 'Brand name', placeholder: 'OLD TOM DISTILLERY' },
 		{ key: 'class_type', label: 'Class / type', placeholder: 'Kentucky Straight Bourbon Whiskey' },
 		{ key: 'abv', label: 'Alcohol content / ABV', placeholder: '45% Alc./Vol. (90 Proof)' },

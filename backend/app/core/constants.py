@@ -1,4 +1,4 @@
-"""Business constants used across extraction and comparison logic."""
+"""Business constants used across extraction and checklist evaluation."""
 
 GOVERNMENT_WARNING_TEXT = (
     "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not "
@@ -7,12 +7,8 @@ GOVERNMENT_WARNING_TEXT = (
     "drive a car or operate machinery, and may cause health problems."
 )
 
-FIELD_DISPLAY_NAMES: dict[str, str] = {
-    "brand_name": "Brand Name",
-    "class_type": "Class / Type",
-    "abv": "Alcohol Content / ABV",
-    "net_contents": "Net Contents",
-    "producer": "Name and Address",
-    "country_of_origin": "Country of Origin",
-    "government_warning": "Government Warning",
+BEVERAGE_TYPE_LABELS: dict[str, str] = {
+    "wine": "Wine",
+    "distilled_spirits": "Distilled Spirits",
+    "malt_beverage": "Malt Beverage",
 }

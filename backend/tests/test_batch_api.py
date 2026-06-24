@@ -1,5 +1,3 @@
-import json
-
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -7,14 +5,13 @@ from app.main import app
 client = TestClient(app)
 
 
-def test_batch_endpoint_processes_multiple_files() -> None:
+def test_batch_endpoint_processes_multiple_files_without_json_payload() -> None:
     response = client.post(
         "/batch",
         files=[
-            ("label_files", ("one.txt", "OLD TOM DISTILLERY\n750 mL", "text/plain")),
-            ("label_files", ("two.txt", "STONE'S THROW\n750 mL", "text/plain")),
+            ("label_files", ("one.txt", "SONOMA VINEYARDS\nChardonnay\nCalifornia\n750 mL", "text/plain")),
+            ("label_files", ("two.txt", "OLD TOM DISTILLERY\nBourbon Whiskey\n750 mL", "text/plain")),
         ],
-        data={"application_data": json.dumps([{"brand_name": "OLD TOM DISTILLERY"}, {"brand_name": "STONE'S THROW"}])},
     )
 
     assert response.status_code == 200

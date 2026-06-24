@@ -1,6 +1,5 @@
 from fastapi.testclient import TestClient
 
-from app.core.constants import GOVERNMENT_WARNING_TEXT
 from app.main import app
 
 client = TestClient(app)
@@ -13,41 +12,35 @@ def test_health_endpoint() -> None:
     assert response.json()["status"] == "ok"
 
 
-def test_review_endpoint_accepts_text_fixture_upload() -> None:
-    label_text = f"""
+def test_review_endpoint_accepts_image_only_text_fixture_upload() -> None:
+    label_text = """
     OLD TOM DISTILLERY
     Kentucky Straight Bourbon Whiskey
     45% Alc./Vol. (90 Proof)
     750 mL
     Bottled by Old Tom Distillery, Frankfort, KY.
-    {GOVERNMENT_WARNING_TEXT}
+    GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during
+    pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability
+    to drive a car or operate machinery, and may cause health problems.
     """
-    application_data = {
-        "brand_name": "Old Tom Distillery",
-        "class_type": "Kentucky Straight Bourbon Whiskey",
-        "abv": "45% Alc./Vol.",
-        "net_contents": "750ml",
-        "producer": "Bottled by Old Tom Distillery, Frankfort, KY",
-        "government_warning": GOVERNMENT_WARNING_TEXT,
-    }
 
     response = client.post(
         "/review",
         files={"label_file": ("label.txt", label_text, "text/plain")},
-        data={"application_data": __import__("json").dumps(application_data)},
     )
 
     assert response.status_code == 200
     payload = response.json()
     assert payload["filename"] == "label.txt"
-    assert payload["fields"][0]["status"] == "match"
+    assert payload["checklist_items"]
+    assert payload["overall_status"] == "review"
+    assert payload["review_reasons"]
 
 
-def test_review_endpoint_rejects_invalid_json() -> None:
+def test_review_endpoint_rejects_empty_file() -> None:
     response = client.post(
         "/review",
-        files={"label_file": ("label.txt", "sample", "text/plain")},
-        data={"application_data": "{not-json}"},
+        files={"label_file": ("label.txt", "", "text/plain")},
     )
 
-    assert response.status_code == 422
+    assert response.status_code == 400

@@ -1,0 +1,46 @@
+{
+  "description": "Government warning capitalization differs from the required exact statement while ordinary fields remain clean and readable.",
+  "covers": {
+    "frontend_upload": "Verify the review form accepts a PNG upload and submits it as multipart form data.",
+    "backend_ingest_and_preprocess": "Verify the backend reads image bytes and routes the upload through the OCR path without returning an empty-file error.",
+    "ocr_extraction": "Assert that OCR recovers the visible warning header text with title case rather than all caps.",
+    "processing_and_validation": "Assert that ordinary fields normalize successfully but the government warning fails exact-match validation."
+  },
+  "ocr_anchor_text": [
+    "OLD TOM DISTILLERY",
+    "Kentucky Straight Bourbon Whiskey",
+    "45% Alc./Vol. (90 Proof)",
+    "750 mL",
+    "Government Warning:"
+  ],
+  "expected_extracted_fields": {
+    "brand_name": "OLD TOM DISTILLERY",
+    "class_type": "Kentucky Straight Bourbon Whiskey",
+    "abv": "45% Alc./Vol. (90 Proof)",
+    "net_contents": "750 mL",
+    "producer": "Bottled by Old Tom Distillery, Frankfort, KY",
+    "country_of_origin": "Product of USA",
+    "government_warning": "Government Warning: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems."
+  },
+  "application_data": {
+    "brand_name": "Old Tom Distillery",
+    "class_type": "Kentucky Straight Bourbon Whiskey",
+    "abv": "45% Alc./Vol.",
+    "net_contents": "750ml",
+    "producer": "Bottled by Old Tom Distillery, Frankfort, KY",
+    "country_of_origin": "Product of USA",
+    "government_warning": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems."
+  },
+  "expected_review": {
+    "overall_status": "mismatch",
+    "field_statuses": {
+      "brand_name": "match",
+      "class_type": "match",
+      "abv": "match",
+      "net_contents": "match",
+      "producer": "match",
+      "country_of_origin": "match",
+      "government_warning": "mismatch"
+    }
+  }
+}

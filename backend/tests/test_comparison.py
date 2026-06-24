@@ -1,5 +1,5 @@
-from app.models.schemas import ReviewField, ReviewStatus
-from app.services.comparison import compare_field, normalize_abv, normalize_net_contents, normalize_text
+from app.core.constants import GOVERNMENT_WARNING_TEXT
+from app.services.comparison import dedupe_review_reasons, normalize_abv, normalize_net_contents, normalize_text, warning_matches_exactly
 
 
 def test_normalize_text_handles_punctuation_and_case() -> None:
@@ -14,13 +14,10 @@ def test_normalize_net_contents_handles_spacing() -> None:
     assert normalize_net_contents("750 mL") == normalize_net_contents("750ml")
 
 
-def test_compare_field_marks_tolerant_match() -> None:
-    review = compare_field(ReviewField.BRAND_NAME, "Stone's Throw", "STONE’S THROW")
+def test_warning_match_requires_exact_text() -> None:
+    assert warning_matches_exactly(GOVERNMENT_WARNING_TEXT) is True
+    assert warning_matches_exactly(GOVERNMENT_WARNING_TEXT.replace("GOVERNMENT WARNING:", "Government Warning:")) is False
 
-    assert review.status == ReviewStatus.MATCH
 
-
-def test_compare_field_marks_mismatch() -> None:
-    review = compare_field(ReviewField.CLASS_TYPE, "Bourbon Whiskey", "Vodka")
-
-    assert review.status == ReviewStatus.MISMATCH
+def test_dedupe_review_reasons_preserves_order() -> None:
+    assert dedupe_review_reasons(["a", "b", "a", "", "c"]) == ["a", "b", "c"]

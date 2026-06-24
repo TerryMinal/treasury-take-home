@@ -1,9 +1,9 @@
-import type { ApplicationData, BatchJobResponse, ReviewResponse } from '$lib/types/api';
+import type { BatchJobResponse, ReviewResponse } from '$lib/types/api';
 
 const API_BASE_URL = import.meta.env.PUBLIC_API_BASE_URL || 'http://localhost:8000';
 
 function assertReviewResponse(payload: unknown): ReviewResponse {
-	if (!payload || typeof payload !== 'object' || !('fields' in payload) || !('ocr' in payload)) {
+	if (!payload || typeof payload !== 'object' || !('checklist_items' in payload) || !('ocr' in payload)) {
 		throw new Error('Backend returned an invalid review response.');
 	}
 	return payload as ReviewResponse;
@@ -28,10 +28,9 @@ async function parseJson(response: Response): Promise<unknown> {
 	return payload;
 }
 
-export async function submitReview(file: File, applicationData: ApplicationData): Promise<ReviewResponse> {
+export async function submitReview(file: File): Promise<ReviewResponse> {
 	const formData = new FormData();
 	formData.set('label_file', file);
-	formData.set('application_data', JSON.stringify(applicationData));
 
 	const response = await fetch(`${API_BASE_URL}/review`, {
 		method: 'POST',
@@ -42,12 +41,11 @@ export async function submitReview(file: File, applicationData: ApplicationData)
 	return assertReviewResponse(payload);
 }
 
-export async function submitBatch(files: File[], applicationData: ApplicationData[]): Promise<BatchJobResponse> {
+export async function submitBatch(files: File[]): Promise<BatchJobResponse> {
 	const formData = new FormData();
 	for (const file of files) {
 		formData.append('label_files', file);
 	}
-	formData.set('application_data', JSON.stringify(applicationData));
 
 	const response = await fetch(`${API_BASE_URL}/batch`, {
 		method: 'POST',

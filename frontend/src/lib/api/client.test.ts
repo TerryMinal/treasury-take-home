@@ -12,7 +12,7 @@ describe('api client', () => {
 			})
 		);
 
-		await expect(submitReview(new File(['text'], 'label.txt'), {})).rejects.toThrow(
+		await expect(submitReview(new File(['text'], 'label.txt'))).rejects.toThrow(
 			'invalid review response'
 		);
 	});

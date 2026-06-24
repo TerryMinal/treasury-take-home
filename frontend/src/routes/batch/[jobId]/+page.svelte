@@ -39,7 +39,7 @@
 	<section class="hero">
 		<p>Batch status</p>
 		<h1>Monitor queued review work.</h1>
-		<p>Results update automatically so reviewers can return to a batch job without refreshing manually.</p>
+		<p>Each label shows its detected beverage type and any reasons a person should take a closer look.</p>
 	</section>
 
 	<div class="actions">

@@ -1,0 +1,48 @@
+{
+  "description": "Baseline OCR fixture with high-contrast text and exact business-rule content for single-label review tests.",
+  "covers": {
+    "frontend_upload": "Use this PNG in a browser-level upload test to verify the file picker accepts image fixtures and submits multipart form data.",
+    "backend_ingest_and_preprocess": "Use this PNG in API or service tests to verify the backend reads non-empty image bytes and routes the file through the OCR provider path.",
+    "ocr_extraction": "Use OCR anchor text assertions to confirm the provider can recover the label text needed for extraction.",
+    "processing_and_validation": "Use the extracted fields and review status expectations below to validate normalization and strict government warning handling."
+  },
+  "ocr_anchor_text": [
+    "OLD TOM DISTILLERY",
+    "Kentucky Straight Bourbon Whiskey",
+    "45% Alc./Vol. (90 Proof)",
+    "750 mL",
+    "Bottled by Old Tom Distillery, Frankfort, KY.",
+    "Product of USA.",
+    "GOVERNMENT WARNING:"
+  ],
+  "expected_extracted_fields": {
+    "brand_name": "OLD TOM DISTILLERY",
+    "class_type": "Kentucky Straight Bourbon Whiskey",
+    "abv": "45% Alc./Vol. (90 Proof)",
+    "net_contents": "750 mL",
+    "producer": "Bottled by Old Tom Distillery, Frankfort, KY",
+    "country_of_origin": "Product of USA",
+    "government_warning": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems."
+  },
+  "application_data": {
+    "brand_name": "Old Tom Distillery",
+    "class_type": "Kentucky Straight Bourbon Whiskey",
+    "abv": "45% Alc./Vol.",
+    "net_contents": "750ml",
+    "producer": "Bottled by Old Tom Distillery, Frankfort, KY",
+    "country_of_origin": "Product of USA",
+    "government_warning": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems."
+  },
+  "expected_review": {
+    "overall_status": "match",
+    "field_statuses": {
+      "brand_name": "match",
+      "class_type": "match",
+      "abv": "match",
+      "net_contents": "match",
+      "producer": "match",
+      "country_of_origin": "match",
+      "government_warning": "match"
+    }
+  }
+}

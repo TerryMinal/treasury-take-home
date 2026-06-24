@@ -3,8 +3,9 @@
 		<p>TTB Prototype</p>
 		<h1>Review alcohol labels faster without removing human judgment.</h1>
 		<p>
-			This prototype compares application data against uploaded label artwork, highlights likely
-			mismatches, and keeps the reviewer in control for edge cases.
+			This prototype reads uploaded label images, identifies the beverage type, checks the label
+			against the matching TTB checklist, and explains exactly why a person should review anything
+			that stays yellow.
 		</p>
 	</section>
 
