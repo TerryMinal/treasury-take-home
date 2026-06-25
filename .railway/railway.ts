@@ -21,6 +21,7 @@ export default defineRailway(() => {
     start: "pnpm start",
     env: {
       NODE_ENV: "production",
+      BODY_SIZE_LIMIT: "10M",
       BACKEND_PRIVATE_BASE_URL: "http://${{backend.RAILWAY_PRIVATE_DOMAIN}}:${{backend.PORT}}",
     },
   });
