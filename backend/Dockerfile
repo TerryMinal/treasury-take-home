@@ -9,8 +9,8 @@ RUN apt-get update \
     && apt-get install --yes --no-install-recommends tesseract-ocr \
     && rm -rf /var/lib/apt/lists/*
 
-COPY backend/pyproject.toml ./pyproject.toml
-COPY backend/app ./app
+COPY pyproject.toml ./pyproject.toml
+COPY app ./app
 
 RUN pip install --no-cache-dir ".[ocr]"
 
