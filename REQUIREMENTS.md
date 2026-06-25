@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Build a standalone prototype that helps TTB compliance agents review alcohol label applications faster by automatically comparing application data against label artwork and surfacing likely mismatches for human review.
+Build a standalone prototype that helps TTB compliance agents review alcohol beverage labels faster by automating routine label checks and surfacing likely issues for human review.
 
 The product should reduce time spent on routine verification while preserving human judgment for edge cases and nuanced compliance decisions.
 
@@ -27,14 +27,13 @@ The product should reduce time spent on routine verification while preserving hu
 The application must allow a user to:
 
 - Upload or provide a label image
-- Enter or upload the corresponding application data
 - Run an automated review
-- View extracted label values alongside application values
-- See which fields match, mismatch, or could not be confidently read
+- View extracted label values, detected issues, and uncertain fields
+- See which fields passed automated checks and which require human review
 
 ### 2. Field comparison
 
-The system must compare common required label fields against application data, including:
+The system must evaluate common required label fields from the label itself, including:
 
 - Brand name
 - Class/type designation
@@ -48,16 +47,15 @@ Implementation guidance for the prototype:
 
 - Ordinary fields should use tolerant comparison with normalization and fuzzy matching where appropriate
 - Warning-statement validation should remain strict and exact
-- Comparison results should include submitted value, extracted value, normalized forms, status, and a short explanation so reviewers can understand why a field was flagged
+- Comparison results should include the extracted value when available, the evaluated status, and a short explanation so reviewers can understand why a field was flagged
 
 ### 3. Match-status output
 
 For each checked field, the system must clearly indicate:
 
-- Match
-- Mismatch
+- Pass
+- Review required
 - Missing from label
-- Missing from application
 - Uncertain / needs human review
 
 ### 4. Review-first design
@@ -160,28 +158,18 @@ The solution should be structured so the prototype can evolve from low-volume te
 
 - It should support concurrent users without redesigning the whole system
 - It should support bursty workloads such as batch uploads from large importers
-- Long-running or batch work should be separable from the interactive web request path
 - The architecture should allow independent scaling of UI, API, and document-processing workloads
-
-### 16. Background processing for batch and heavy workloads
-
-The architecture should include an asynchronous processing path for work that may exceed the interactive response target.
-
-- Single-label review may run inline if it stays within the performance target
-- Batch jobs should be queued and processed asynchronously
-- Users should be able to see processing status for batch submissions
-- Failures in one item should not block the rest of the batch
 
 ## Quality Requirements
 
-### 17. Accuracy over automation theater
+### 16. Accuracy over automation theater
 
 The prototype should prioritize trustworthy outputs over flashy automation.
 
 - It is better to mark a field as uncertain than confidently wrong
 - Ambiguous cases should be escalated to human review
 
-### 18. Support imperfect inputs
+### 17. Support imperfect inputs
 
 The system should work with typical label images and, if possible, tolerate moderate quality issues such as:
 
@@ -191,17 +179,17 @@ The system should work with typical label images and, if possible, tolerate mode
 
 This is a desirable capability for the prototype, but not at the cost of core workflow reliability.
 
-### 19. Observable and supportable deployment
+### 18. Observable and supportable deployment
 
 The system should be designed so future operators can monitor health and diagnose failures.
 
 - Application errors should be logged centrally
 - Processing status should be traceable across upload, extraction, comparison, and review steps
-- Basic performance metrics should be available for response times, queue depth, and failed jobs
+- Basic performance metrics should be available for response times and failed jobs
 
 ## Proposed Deployment Architecture
 
-The prototype should use a lightweight, stateless architecture that can be deployed to Azure and scaled without major redesign. A simple frontend should handle uploads, review results, and batch status, while a backend API performs field comparison and orchestrates processing. For fast single-label reviews, the API may process requests synchronously when it can stay within the target response time of about 5 seconds. For batch submissions or heavier OCR workloads, processing should move to a background worker behind a queue so spikes in volume do not slow down the interactive user experience. If temporary file handling is needed, uploaded images may be stored briefly in Azure Blob Storage with short retention, but the system should not rely on a persistent database for prototype operation. This architecture maps cleanly to Azure services such as App Service or Container Apps for the API, Functions or worker containers for background jobs, Service Bus or Storage Queue for asynchronous processing, Blob Storage for short-lived artifacts, and Azure Monitor/Application Insights for observability. This keeps the prototype small and operationally simple while preserving a clear path to future scaling in the agency's Azure environment.
+The prototype should use a lightweight, stateless architecture that can be deployed to Azure and scaled without major redesign. A simple frontend should handle uploads, review results, and batch status, while a backend API performs field comparison and orchestrates processing. For this prototype, single-label reviews and batch submissions may both be handled within the API as long as the user experience remains responsive and the design preserves a clear path to future scaling. If temporary file handling is needed, uploaded images may be stored briefly in Azure Blob Storage with short retention, but the system should not rely on a persistent database for prototype operation. This architecture maps cleanly to Azure services such as App Service or Container Apps for the API, Blob Storage for short-lived artifacts, and Azure Monitor/Application Insights for observability. This keeps the prototype small and operationally simple while preserving a clear path to future scaling in the agency's Azure environment.
 
 ### MVP Technology Choices
 
@@ -227,27 +215,21 @@ flowchart LR
     U["Compliance Agent"] --> F["Frontend UI<br/>Azure Static Web Apps or App Service"]
     F --> A["Backend API<br/>Azure App Service or Container Apps"]
 
-    A --> S["Synchronous Review Path<br/>Fast single-label processing"]
-    A --> Q["Async Queue<br/>Azure Service Bus or Storage Queue"]
-
-    Q --> W["Background Worker<br/>Azure Functions or Container Apps job"]
-    W --> B["Temporary Blob Storage<br/>Short-lived uploaded files/artifacts"]
+    A --> S["Review Processing Path<br/>Single-label and batch handling"]
+    A --> B["Temporary Blob Storage<br/>Short-lived uploaded files/artifacts"]
 
     S --> R["Review Results"]
-    W --> R
     R --> F
 
     A --> M["Monitoring and Logs<br/>Azure Monitor / Application Insights"]
-    W --> M
 ```
 
 ### Architecture Breakdown
 
-- Frontend UI: a SvelteKit-based web application that accepts label uploads, application data input, and displays review results and batch status through simple form-driven screens.
-- Backend API: a FastAPI service with typed request and response models that handles validation, field comparison, result formatting, and decides whether work stays synchronous or moves to the async path.
-- Synchronous review path: supports simple single-label checks that can complete within the target response time.
-- Async queue and worker: handle batch submissions and heavier OCR/extraction work without slowing interactive usage, and should reuse the same OCR and comparison pipeline as synchronous review.
-- Temporary Blob Storage: used only when needed for short-lived files or artifacts during batch and async processing.
+- Frontend UI: a SvelteKit-based web application that accepts label uploads and displays review results and batch status through simple form-driven screens.
+- Backend API: a FastAPI service with typed request and response models that handles validation, field comparison, and result formatting for both single-label and batch review flows.
+- Review processing path: supports single-label checks and batch submissions while preserving a path to future scaling if workload demands increase.
+- Temporary Blob Storage: used only when needed for short-lived files or artifacts during processing.
 - Monitoring and logs: capture errors, latency, and job health for supportability in Azure.
 
 ## Out of Scope / Lower Priority
@@ -264,31 +246,29 @@ flowchart LR
 
 - Single-label upload and review
 - OCR or text extraction from label image
-- Comparison against entered application fields
-- Clear match/mismatch/uncertain statuses
+- Automated evaluation of extracted label fields
+- Clear pass/review/uncertain statuses
 - Strict government warning validation
 - Simple, accessible UI
 - Near-immediate response, ideally around 5 seconds
 - Azure-compatible deployment approach
-- Architecture that supports future worker/queue-based scaling
+- Architecture that supports future scaling without major redesign
 
 ### Should-have
 
 - Batch upload and batch results view
 - Reasonable normalization for non-warning text comparisons
 - Helpful handling for unreadable or low-quality images
-- Asynchronous processing for larger or slower jobs
 - Basic observability and job-status tracking
 
 ### Nice-to-have
 
 - Better handling of angled or glare-heavy images
 - More advanced beverage-specific rule logic
-- Additional compliance heuristics beyond field matching
+- Additional compliance heuristics beyond the core checklist rules
 
 ## Key Assumptions
 
-- Application data can be entered manually or uploaded in a simple structured format
 - The prototype will focus on distilled spirits first unless expanded later
 - Human reviewers are available to resolve uncertain results
 - The goal is operational assistance, not autonomous compliance determination
@@ -302,8 +282,8 @@ flowchart LR
 
 The prototype will be considered successful if it demonstrates that an agent can:
 
-- submit a label and application data quickly,
+- submit a label quickly,
 - receive a review result in roughly 5 seconds,
-- see extracted fields and comparison outcomes clearly,
+- see extracted fields and review outcomes clearly,
 - catch obvious mismatches and warning-statement issues faster than manual review,
 - and use the tool without confusion or special training.

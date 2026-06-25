@@ -20,6 +20,8 @@ The product supports two user workflows:
 - single-label review through `POST /review`
 - batch review through `POST /batch` and `GET /batch/{job_id}`
 
+As built today, the product reviews label artwork only. It does not yet accept separate application data and does not perform a submitted-value-versus-extracted-value comparison workflow.
+
 For each uploaded label, the system:
 
 1. reads the label text through OCR or text passthrough for deterministic test inputs
@@ -35,7 +37,7 @@ The frontend is intentionally simple. Users choose either a single review or bat
 
 ### 1. Review-first, not auto-approval
 
-The most important product choice is that the system only produces `pass` or `review` outcomes. There is no automated approval path.
+The most important product choice in the current implementation is that the system produces checklist-style `pass` or `review` outcomes rather than automated approvals or rejections.
 
 Why this matters:
 
@@ -44,6 +46,8 @@ Why this matters:
 - a conservative system is easier to trust than one that appears more certain than it really is
 
 This is reflected directly in the backend response model and the UI. If the system cannot confirm a rule with confidence, it explicitly tells the reviewer why human attention is needed.
+
+This is narrower than the original project brief, which called for explicit submitted-value-versus-label comparison statuses such as match, mismatch, missing, and uncertain. The README is describing the product as it currently exists.
 
 ### 2. Local-first OCR with graceful fallback
 
@@ -99,12 +103,21 @@ The interface does not expect users to prepare JSON, map fields manually, or und
 ## Architecture
 
 The deployed application shape is a lightweight web frontend plus a FastAPI backend.
+On Railway, the frontend is the only public service. The backend stays private and is
+reached only through Railway private networking.
 
 ```text
-SvelteKit frontend
+Browser
         |
         v
-FastAPI API layer
+Public SvelteKit frontend
+  - Railway managed domain
+  - same-origin /api/* routes
+        |
+        v
+Private FastAPI API layer
+  - Railway private network only
+  - no public domain
         |
         v
 Review services
@@ -142,6 +155,8 @@ The core orchestration happens in [backend/app/services/review.py](/Users/tguan/
 - evaluate the matching checklist
 - aggregate reviewer-facing explanations and reasons
 
+The current backend does not ingest a separate application-data payload. It reviews the label image on its own and returns a structured checklist result derived from OCR and rule evaluation.
+
 Important implementation characteristics:
 
 - batch jobs are currently stored in memory
@@ -167,6 +182,8 @@ The extraction layer in [backend/app/services/extraction.py](/Users/tguan/Docume
 
 The comparison utilities in [backend/app/services/comparison.py](/Users/tguan/Documents/Projects/treasury-take-home/backend/app/services/comparison.py) normalize ordinary text loosely while keeping the government warning exact.
 
+This comparison layer is used inside the label-review pipeline itself. It is not yet a full label-versus-application reconciliation layer.
+
 That split was intentional:
 
 - ordinary label fields often vary in punctuation, capitalization, or formatting
@@ -185,6 +202,8 @@ The frontend routes are intentionally simple:
 
 The frontend API client in [frontend/src/lib/api/client.ts](/Users/tguan/Documents/Projects/treasury-take-home/frontend/src/lib/api/client.ts) validates that responses contain the expected top-level structure before rendering them. This is a small but useful defensive choice that helps prevent silent UI failures if the API contract drifts.
 
+In Railway production, the browser never talks to FastAPI directly. The browser calls frontend-local routes such as `/api/review`, and SvelteKit server routes proxy those requests to the private backend using the server-only `BACKEND_PRIVATE_BASE_URL` environment variable. That proxy layer lives under [frontend/src/routes/api/](/Users/tguan/Documents/Projects/treasury-take-home/frontend/src/routes/api/).
+
 The results UI is optimized for scanning:
 
 - green for passed checks
@@ -199,13 +218,89 @@ The interface is less focused on technical transparency for developers and more 
 
 This prototype is intentionally narrow, and there are a few important limitations to call out plainly:
 
+- the current implementation does not accept or compare separate application data
+- result statuses are checklist-oriented `pass` or `review`, not the fuller match/mismatch/missing taxonomy from the original brief
 - batch job state is ephemeral and stored in process memory
 - batch processing is initiated synchronously inside the API process today rather than through a durable queue
 - OCR accuracy depends on optional local dependencies and the presence of the `tesseract` executable
 - several layout-sensitive or highly contextual checklist rules still require human review by design
-- the repository does not yet include a production deployment manifest or infrastructure-as-code package
+- batch status is not durable across backend restarts
+- Railway deployment currently assumes the backend private hostname `backend.railway.internal`
 
 These are reasonable prototype tradeoffs. They keep the implementation simple while still showing the product flow, review model, and architectural direction.
+
+## Railway Deployment
+
+The repository now includes Railway configuration in [/.railway/railway.ts](/Users/tguan/Documents/Projects/treasury-take-home/.railway/railway.ts).
+
+### Production shape
+
+- `frontend` is deployed from `/frontend`
+- `backend` is deployed from `/backend`
+- only `frontend` gets a Railway-managed public domain
+- `backend` stays private and is reached at `http://backend.railway.internal:8080`
+
+### Why the backend is private
+
+This deployment routes all browser traffic through the frontend server:
+
+- the browser posts to same-origin frontend routes such as `/api/review`
+- the frontend server proxies those requests to the private backend
+- the backend is not exposed on the public internet
+
+That gives a simpler production CORS posture and a smaller public attack surface.
+
+### Backend service details
+
+The backend is packaged as its own Python service root:
+
+- [backend/pyproject.toml](/Users/tguan/Documents/Projects/treasury-take-home/backend/pyproject.toml)
+- [backend/Dockerfile](/Users/tguan/Documents/Projects/treasury-take-home/backend/Dockerfile)
+
+The backend Docker image installs:
+
+- Python dependencies
+- OCR Python extras
+- the `tesseract-ocr` system package
+
+The backend starts with:
+
+```bash
+uvicorn app.main:app --host 0.0.0.0 --port ${PORT}
+```
+
+### Frontend service details
+
+The frontend uses `@sveltejs/adapter-node` so Railway can run it as a Node server.
+
+Important production settings:
+
+- `BACKEND_PRIVATE_BASE_URL=http://backend.railway.internal:8080`
+- `BODY_SIZE_LIMIT=10M`
+
+The body size limit matters because the SvelteKit Node adapter otherwise rejects larger label uploads before they ever reach FastAPI.
+
+### Railway setup steps
+
+1. Push the repo to GitHub `main`.
+2. Create a Railway project from the GitHub repository.
+3. Create a `backend` service with root directory `/backend`.
+4. Let the backend build from [backend/Dockerfile](/Users/tguan/Documents/Projects/treasury-take-home/backend/Dockerfile).
+5. Do not generate a public domain for the backend.
+6. Create a `frontend` service with root directory `/frontend`.
+7. Generate a Railway-managed public domain for the frontend service only.
+8. Set `BACKEND_PRIVATE_BASE_URL=http://backend.railway.internal:8080` on the frontend service.
+9. Set `BODY_SIZE_LIMIT=10M` on the frontend service.
+10. Enable GitHub auto-deploy from branch `main` for both services if that feature is available in your Railway plan.
+
+### Production verification checklist
+
+- the frontend public domain loads
+- `POST /api/review` succeeds through the frontend
+- `POST /api/batch` succeeds through the frontend
+- the backend has no public Railway domain
+- `GET /health` succeeds inside the backend container
+- `tesseract --version` succeeds inside the backend container
 
 ## Why This Approach Is A Good Prototype Shape
 
@@ -351,8 +446,8 @@ If this prototype were being advanced for a more serious pilot, the highest-valu
 
 1. move batch processing from in-memory execution to a queue-backed worker model
 2. add durable job-result storage
-3. package the backend as a container with OCR dependencies included
-4. add deployment manifests and basic infrastructure-as-code for Azure
+3. make the backend private hostname configurable if Railway service naming changes
+4. add Azure deployment manifests and basic infrastructure-as-code
 5. expand rule coverage and real-label test fixtures
 6. evaluate whether Azure OCR meaningfully improves accuracy or supportability
 
@@ -370,14 +465,14 @@ If this prototype were being advanced for a more serious pilot, the highest-valu
 ```bash
 python3 -m venv .venv
 . .venv/bin/activate
-pip install -e '.[dev]'
+pip install -e './backend[dev]'
 uvicorn app.main:app --app-dir backend --reload
 ```
 
 Optional local OCR dependencies:
 
 ```bash
-pip install -e '.[ocr]'
+pip install -e './backend[ocr]'
 ```
 
 Install the `tesseract` executable locally as well if you want OCR to run on image uploads. Without it, the backend still returns a structured review, but image files will be marked for human review with an OCR availability reason.
@@ -393,6 +488,13 @@ pnpm dev
 Set `BACKEND_PRIVATE_BASE_URL` only if the frontend server should proxy to a backend other than `http://localhost:8000`.
 
 For Railway, the browser talks only to the frontend service. The frontend server proxies API traffic to the backend over private networking.
+
+If you want local uploads that are closer to production size, you can also run the frontend with a larger body limit:
+
+```bash
+cd frontend
+BODY_SIZE_LIMIT=10M pnpm dev
+```
 
 ## Verification
 
