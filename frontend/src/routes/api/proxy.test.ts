@@ -43,4 +43,19 @@ describe('backend proxy helpers', () => {
 		expect(response.status).toBe(200);
 		await expect(response.json()).resolves.toEqual({ job_id: 'job-123', results: [] });
 	});
+
+	it('returns a 502 with a helpful message when the backend fetch throws', async () => {
+		const fetchMock = vi.fn().mockRejectedValue(new Error('fetch failed'));
+		const request = new Request('http://frontend.test/api/review', {
+			method: 'POST',
+			body: new FormData()
+		});
+
+		const response = await proxyMultipartPost(fetchMock, request, '/review');
+
+		expect(response.status).toBe(502);
+		await expect(response.json()).resolves.toEqual({
+			detail: 'Backend proxy request failed: fetch failed'
+		});
+	});
 });
