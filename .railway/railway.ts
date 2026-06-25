@@ -22,7 +22,7 @@ export default defineRailway(() => {
     env: {
       NODE_ENV: "production",
       BODY_SIZE_LIMIT: "10M",
-      BACKEND_PRIVATE_BASE_URL: `http://${backend.env.RAILWAY_PRIVATE_DOMAIN}:${backend.env.PORT}`,
+      BACKEND_PRIVATE_BASE_URL: "http://backend.railway.internal:8080",
     },
   });
 
