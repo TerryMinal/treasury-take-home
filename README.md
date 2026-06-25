@@ -466,16 +466,45 @@ If this prototype were being advanced for a more serious pilot, the highest-valu
 python3 -m venv .venv
 . .venv/bin/activate
 pip install -e './backend[dev]'
-uvicorn app.main:app --app-dir backend --reload
+.venv/bin/uvicorn app.main:app --app-dir backend --reload
 ```
 
-Optional local OCR dependencies:
+The `backend[dev]` extra now includes `pytesseract` and the image-processing libraries used by the OCR provider.
+
+Install the `tesseract` executable separately for your platform before testing OCR on image uploads:
+
+macOS:
+
+```bash
+brew install tesseract
+```
+
+Ubuntu or Debian:
+
+```bash
+sudo apt-get update
+sudo apt-get install --yes tesseract-ocr
+```
+
+Fedora:
+
+```bash
+sudo dnf install --assumeyes tesseract
+```
+
+Windows:
+
+1. Install [Tesseract OCR for Windows](https://github.com/UB-Mannheim/tesseract/wiki).
+2. Add the Tesseract install directory, commonly `C:\Program Files\Tesseract-OCR`, to your `PATH`.
+3. Open a new terminal and run `tesseract --version` to confirm it is available.
+
+If you only want the OCR-specific Python dependencies without the rest of the backend dev toolchain:
 
 ```bash
 pip install -e './backend[ocr]'
 ```
 
-Install the `tesseract` executable locally as well if you want OCR to run on image uploads. Without it, the backend still returns a structured review, but image files will be marked for human review with an OCR availability reason.
+Without the local `tesseract` executable, the backend still returns a structured review, but image files will be marked for human review with an OCR availability reason.
 
 ## Frontend
 
