@@ -1,7 +1,5 @@
 import type { BatchJobResponse, ReviewResponse } from '$lib/types/api';
 
-const API_BASE_URL = import.meta.env.PUBLIC_API_BASE_URL || 'http://localhost:8000';
-
 function assertReviewResponse(payload: unknown): ReviewResponse {
 	if (!payload || typeof payload !== 'object' || !('checklist_items' in payload) || !('ocr' in payload)) {
 		throw new Error('Backend returned an invalid review response.');
@@ -32,7 +30,7 @@ export async function submitReview(file: File): Promise<ReviewResponse> {
 	const formData = new FormData();
 	formData.set('label_file', file);
 
-	const response = await fetch(`${API_BASE_URL}/review`, {
+	const response = await fetch('/api/review', {
 		method: 'POST',
 		body: formData
 	});
@@ -47,7 +45,7 @@ export async function submitBatch(files: File[]): Promise<BatchJobResponse> {
 		formData.append('label_files', file);
 	}
 
-	const response = await fetch(`${API_BASE_URL}/batch`, {
+	const response = await fetch('/api/batch', {
 		method: 'POST',
 		body: formData
 	});
@@ -57,7 +55,7 @@ export async function submitBatch(files: File[]): Promise<BatchJobResponse> {
 }
 
 export async function fetchBatchJob(jobId: string): Promise<BatchJobResponse> {
-	const response = await fetch(`${API_BASE_URL}/batch/${jobId}`);
+	const response = await fetch(`/api/batch/${jobId}`);
 	const payload = await parseJson(response);
 	return assertBatchJobResponse(payload);
 }
